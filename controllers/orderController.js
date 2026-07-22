@@ -535,8 +535,12 @@ const verifyOrder = async (req, res) => {
       res.json({ success: false, message: "Invalid signature" });
     }
   } catch (error) {
-    console.log(error);
-    res.json({ success: false, message: "Error verifying payment" });
+    // console.log(error);
+    // res.json({ success: false, message: "Error verifying payment" });
+    // } catch (error) {
+  console.log(error);
+  res.json({ success: false, message: error.message }); // 👈 temporary — shows real reason
+
   }
 };
 
