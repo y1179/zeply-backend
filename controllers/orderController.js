@@ -109,288 +109,365 @@
 // export {placeOrder,verifyOrder,userOrders,listOrders,updateStatus}
 
 
-import orderModel from "../models/orderModel.js";
-import userModel from "../models/userModel.js";
+// import orderModel from "../models/orderModel.js";
+// import userModel from "../models/userModel.js";
+// import Razorpay from "razorpay";
+// import dotenv from "dotenv";
+
+// dotenv.config();
+
+
+// const razorpay = new Razorpay({
+//     key_id: process.env.RAZORPAY_KEY_ID,
+//     key_secret: process.env.RAZORPAY_KEY_SECRET
+// });
+
+
+
+// // Place Order
+
+// const placeOrder = async (req, res) => {
+
+//     try {
+//         const frontend_url = "http://localhost:5173";
+//         const newOrder = new orderModel({
+
+//             userId: req.body.userId,
+//             items: req.body.items,
+//             amount: req.body.amount,
+//             address: req.body.address
+//         });
+
+
+//         await newOrder.save();
+
+//         await userModel.findByIdAndUpdate(
+//             req.body.userId,
+//             {
+//                 cartData:{}
+//             }
+//         );
+
+
+
+//         // Create Razorpay Order
+
+//         const options = {
+//             amount: req.body.amount * 100,
+//             currency:"INR",
+//             receipt:`order_${newOrder._id}`
+//         };
+
+
+//         const razorpayOrder = await razorpay.orders.create(options);
+
+
+
+//         res.json({
+//             success:true,
+//             order:razorpayOrder,
+//             orderId:newOrder._id,
+//             key:process.env.RAZORPAY_KEY_ID
+//         });
+
+
+
+//     } catch(error){
+//         console.log(error);
+//         res.json({
+//             success:false,
+//             message:"Error"
+//         });
+
+//     }
+
+// };
+
+
+
+
+
+// // Verify Order
+
+// const verifyOrder = async(req,res)=>{
+//     const {orderId,success}=req.body;
+//     try{
+//         if(success==="true"){
+//             await orderModel.findByIdAndUpdate(
+//                orderId,
+//               {
+//                     payment:true
+//                 }
+
+//             );
+
+
+//             res.json({
+
+//                 success:true,
+
+//                 message:"Paid"
+
+//             });
+
+
+//         }
+
+//         else{
+
+
+//             await orderModel.findByIdAndDelete(orderId);
+
+
+//             res.json({
+
+//                 success:false,
+
+//                 message:"Payment Failed"
+
+//             });
+
+//         }
+
+
+
+//     }catch(error){
+
+//         console.log(error);
+
+
+//         res.json({
+
+//             success:false,
+
+//             message:"Error"
+
+//         });
+
+//     }
+
+
+// };
+
+
+
+
+
+// // User Orders
+
+// const userOrders = async(req,res)=>{
+
+//     try{
+
+//         const orders = await orderModel.find({
+
+//             userId:req.body.userId
+
+//         });
+
+
+//         res.json({
+
+//             success:true,
+
+//             data:orders
+
+//         });
+
+
+//     }catch(error){
+
+//         console.log(error);
+
+
+//         res.json({
+
+//             success:false,
+
+//             message:"Error"
+
+//         });
+
+//     }
+
+// };
+
+
+
+
+
+// // Admin Orders
+
+// const listOrders = async(req,res)=>{
+
+//     try{
+
+
+//         const orders = await orderModel.find({});
+
+
+//         res.json({
+
+//             success:true,
+
+//             data:orders
+
+//         });
+
+
+
+//     }catch(error){
+
+
+//         console.log(error);
+
+
+//         res.json({
+
+//             success:false,
+
+//             message:"Error"
+
+//         });
+
+
+//     }
+
+// };
+
+
+
+
+
+// // Update Status
+
+// const updateStatus = async(req,res)=>{
+
+//     try{
+
+
+//         await orderModel.findByIdAndUpdate(
+
+//             req.body.orderId,
+
+//             {
+//                 status:req.body.status
+//             }
+
+//         );
+
+
+//         res.json({
+
+//             success:true,
+
+//             message:"Status updated"
+
+//         });
+
+
+
+//     }catch(error){
+
+
+//         console.log(error);
+
+
+//         res.json({
+
+//             success:false,
+
+//             message:"Error"
+
+//         });
+
+//     }
+
+// };
+
+
+
+// export {
+//     placeOrder,
+//     verifyOrder,
+//     userOrders,
+//     listOrders,
+//     updateStatus
+// };
+
+
+
+
 import Razorpay from "razorpay";
-import dotenv from "dotenv";
+import crypto from "crypto";
+import orderModel from "../models/orderModel.js";
 
-dotenv.config();
-
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET
+const razorpayInstance = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-
-
-// Place Order
-
+// Step 1: place order + create Razorpay order
 const placeOrder = async (req, res) => {
+  try {
+    const newOrder = new orderModel({
+      userId: req.body.userId,
+      items: req.body.items,
+      amount: req.body.amount,
+      address: req.body.address,
+    });
+    await newOrder.save();
 
-    try {
-        const frontend_url = "http://localhost:5173";
-        const newOrder = new orderModel({
+    const options = {
+      amount: Math.round(req.body.amount * 100), // paise
+      currency: "INR",
+      receipt: newOrder._id.toString(),
+    };
 
-            userId: req.body.userId,
-            items: req.body.items,
-            amount: req.body.amount,
-            address: req.body.address
-        });
+    const razorpayOrder = await razorpayInstance.orders.create(options);
 
+    res.json({
+      success: true,
+      order: razorpayOrder,
+      dbOrderId: newOrder._id,
+    });
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: "Error placing order" });
+  }
+};
 
-        await newOrder.save();
+// Step 2: verify payment signature after user pays
+const verifyPayment = async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, dbOrderId } = req.body;
 
-        await userModel.findByIdAndUpdate(
-            req.body.userId,
-            {
-                cartData:{}
-            }
-        );
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest("hex");
 
-
-
-        // Create Razorpay Order
-
-        const options = {
-            amount: req.body.amount * 100,
-            currency:"INR",
-            receipt:`order_${newOrder._id}`
-        };
-
-
-        const razorpayOrder = await razorpay.orders.create(options);
-
-
-
-        res.json({
-            success:true,
-            order:razorpayOrder,
-            orderId:newOrder._id,
-            key:process.env.RAZORPAY_KEY_ID
-        });
-
-
-
-    } catch(error){
-        console.log(error);
-        res.json({
-            success:false,
-            message:"Error"
-        });
-
+    if (expectedSignature === razorpay_signature) {
+      await orderModel.findByIdAndUpdate(dbOrderId, { payment: true });
+      res.json({ success: true, message: "Payment verified" });
+    } else {
+      await orderModel.findByIdAndDelete(dbOrderId);
+      res.json({ success: false, message: "Invalid signature" });
     }
-
+  } catch (err) {
+    console.error(err);
+    res.json({ success: false, message: "Verification failed" });
+  }
 };
 
-
-
-
-
-// Verify Order
-
-const verifyOrder = async(req,res)=>{
-    const {orderId,success}=req.body;
-    try{
-        if(success==="true"){
-            await orderModel.findByIdAndUpdate(
-               orderId,
-              {
-                    payment:true
-                }
-
-            );
-
-
-            res.json({
-
-                success:true,
-
-                message:"Paid"
-
-            });
-
-
-        }
-
-        else{
-
-
-            await orderModel.findByIdAndDelete(orderId);
-
-
-            res.json({
-
-                success:false,
-
-                message:"Payment Failed"
-
-            });
-
-        }
-
-
-
-    }catch(error){
-
-        console.log(error);
-
-
-        res.json({
-
-            success:false,
-
-            message:"Error"
-
-        });
-
-    }
-
-
+const userOrders = async (req, res) => {
+  try {
+    const orders = await orderModel.find({ userId: req.body.userId });
+    res.json({ success: true, data: orders });
+  } catch (err) {
+    res.json({ success: false, message: "Error fetching orders" });
+  }
 };
 
-
-
-
-
-// User Orders
-
-const userOrders = async(req,res)=>{
-
-    try{
-
-        const orders = await orderModel.find({
-
-            userId:req.body.userId
-
-        });
-
-
-        res.json({
-
-            success:true,
-
-            data:orders
-
-        });
-
-
-    }catch(error){
-
-        console.log(error);
-
-
-        res.json({
-
-            success:false,
-
-            message:"Error"
-
-        });
-
-    }
-
-};
-
-
-
-
-
-// Admin Orders
-
-const listOrders = async(req,res)=>{
-
-    try{
-
-
-        const orders = await orderModel.find({});
-
-
-        res.json({
-
-            success:true,
-
-            data:orders
-
-        });
-
-
-
-    }catch(error){
-
-
-        console.log(error);
-
-
-        res.json({
-
-            success:false,
-
-            message:"Error"
-
-        });
-
-
-    }
-
-};
-
-
-
-
-
-// Update Status
-
-const updateStatus = async(req,res)=>{
-
-    try{
-
-
-        await orderModel.findByIdAndUpdate(
-
-            req.body.orderId,
-
-            {
-                status:req.body.status
-            }
-
-        );
-
-
-        res.json({
-
-            success:true,
-
-            message:"Status updated"
-
-        });
-
-
-
-    }catch(error){
-
-
-        console.log(error);
-
-
-        res.json({
-
-            success:false,
-
-            message:"Error"
-
-        });
-
-    }
-
-};
-
-
-
-export {
-    placeOrder,
-    verifyOrder,
-    userOrders,
-    listOrders,
-    updateStatus
-};
+export { placeOrder, verifyPayment, userOrders };

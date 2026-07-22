@@ -22,7 +22,6 @@ Thumbs.db
 .vscode/
 
 # Uploaded files (optional)
-uploads/
 
 # Build files (if any)
 dist/
