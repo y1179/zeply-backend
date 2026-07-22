@@ -398,16 +398,92 @@
 
 
 
+// import Razorpay from "razorpay";
+// import crypto from "crypto";
+// import orderModel from "../models/orderModel.js";
+
+// const razorpayInstance = new Razorpay({
+//   key_id: process.env.RAZORPAY_KEY_ID,
+//   key_secret: process.env.RAZORPAY_KEY_SECRET,
+// });
+
+// // Step 1: place order + create Razorpay order
+// const placeOrder = async (req, res) => {
+//   try {
+//     const newOrder = new orderModel({
+//       userId: req.body.userId,
+//       items: req.body.items,
+//       amount: req.body.amount,
+//       address: req.body.address,
+//     });
+//     await newOrder.save();
+
+//     const options = {
+//       amount: Math.round(req.body.amount * 100), // paise
+//       currency: "INR",
+//       receipt: newOrder._id.toString(),
+//     };
+
+//     const razorpayOrder = await razorpayInstance.orders.create(options);
+
+//     res.json({
+//       success: true,
+//       order: razorpayOrder,
+//       dbOrderId: newOrder._id,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.json({ success: false, message: "Error placing order" });
+//   }
+// };
+
+// // Step 2: verify payment signature after user pays
+// const verifyPayment = async (req, res) => {
+//   try {
+//     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, dbOrderId } = req.body;
+
+//     const body = razorpay_order_id + "|" + razorpay_payment_id;
+//     const expectedSignature = crypto
+//       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+//       .update(body)
+//       .digest("hex");
+
+//     if (expectedSignature === razorpay_signature) {
+//       await orderModel.findByIdAndUpdate(dbOrderId, { payment: true });
+//       res.json({ success: true, message: "Payment verified" });
+//     } else {
+//       await orderModel.findByIdAndDelete(dbOrderId);
+//       res.json({ success: false, message: "Invalid signature" });
+//     }
+//   } catch (err) {
+//     console.error(err);
+//     res.json({ success: false, message: "Verification failed" });
+//   }
+// };
+
+// const userOrders = async (req, res) => {
+//   try {
+//     const orders = await orderModel.find({ userId: req.body.userId });
+//     res.json({ success: true, data: orders });
+//   } catch (err) {
+//     res.json({ success: false, message: "Error fetching orders" });
+//   }
+// };
+
+// export { placeOrder, verifyPayment, userOrders };
+
+
+import orderModel from "../models/orderModel.js";
+import userModel from "../models/userModel.js";
 import Razorpay from "razorpay";
 import crypto from "crypto";
-import orderModel from "../models/orderModel.js";
 
-const razorpayInstance = new Razorpay({
+const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
-// Step 1: place order + create Razorpay order
+// Place order + create Razorpay order
 const placeOrder = async (req, res) => {
   try {
     const newOrder = new orderModel({
@@ -418,30 +494,33 @@ const placeOrder = async (req, res) => {
     });
     await newOrder.save();
 
+    await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
+
     const options = {
       amount: Math.round(req.body.amount * 100), // paise
       currency: "INR",
-      receipt: newOrder._id.toString(),
+      receipt: `order_${newOrder._id}`,
     };
 
-    const razorpayOrder = await razorpayInstance.orders.create(options);
+    const razorpayOrder = await razorpay.orders.create(options);
 
     res.json({
       success: true,
       order: razorpayOrder,
-      dbOrderId: newOrder._id,
+      orderId: newOrder._id,
+      key: process.env.RAZORPAY_KEY_ID,
     });
-  } catch (err) {
-    console.error(err);
+  } catch (error) {
+    console.log(error);
     res.json({ success: false, message: "Error placing order" });
   }
 };
 
-// Step 2: verify payment signature after user pays
-const verifyPayment = async (req, res) => {
-  try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, dbOrderId } = req.body;
+// Verify payment signature — this is the security-critical step
+const verifyOrder = async (req, res) => {
+  const { orderId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
+  try {
     const body = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
@@ -449,15 +528,15 @@ const verifyPayment = async (req, res) => {
       .digest("hex");
 
     if (expectedSignature === razorpay_signature) {
-      await orderModel.findByIdAndUpdate(dbOrderId, { payment: true });
-      res.json({ success: true, message: "Payment verified" });
+      await orderModel.findByIdAndUpdate(orderId, { payment: true });
+      res.json({ success: true, message: "Paid" });
     } else {
-      await orderModel.findByIdAndDelete(dbOrderId);
+      await orderModel.findByIdAndDelete(orderId);
       res.json({ success: false, message: "Invalid signature" });
     }
-  } catch (err) {
-    console.error(err);
-    res.json({ success: false, message: "Verification failed" });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: "Error verifying payment" });
   }
 };
 
@@ -465,9 +544,9 @@ const userOrders = async (req, res) => {
   try {
     const orders = await orderModel.find({ userId: req.body.userId });
     res.json({ success: true, data: orders });
-  } catch (err) {
+  } catch (error) {
     res.json({ success: false, message: "Error fetching orders" });
   }
 };
 
-export { placeOrder, verifyPayment, userOrders };
+export { placeOrder, verifyOrder, userOrders };
