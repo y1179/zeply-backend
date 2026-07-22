@@ -483,6 +483,7 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+
 // Place order + create Razorpay order
 const placeOrder = async (req, res) => {
   try {
@@ -501,7 +502,8 @@ const placeOrder = async (req, res) => {
       currency: "INR",
       receipt: `order_${newOrder._id}`,
     };
-
+    console.log("KEY:", process.env.RAZORPAY_KEY_ID);
+console.log("SECRET:", process.env.RAZORPAY_KEY_SECRET ? "Loaded" : "Missing");
     const razorpayOrder = await razorpay.orders.create(options);
 
     res.json({
