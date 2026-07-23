@@ -37,24 +37,49 @@
 // export default orderRouter;
 
 
+// import express from "express";
+// import {
+//   placeOrder,
+//   verifyOrder,
+//   userOrders,
+//   listOrders,
+// } from "../controllers/orderController.js";
+
+// import auth from "../middleware/auth.js";
+
+// const orderRouter = express.Router();
+
+// // User routes
+// orderRouter.post("/place", auth, placeOrder);
+// orderRouter.post("/verify", auth, verifyOrder);
+// orderRouter.post("/userorders", auth, userOrders);
+
+// // Admin route
+// orderRouter.get("/list", listOrders);
+
+// export default orderRouter;
+
+
 import express from "express";
 import {
   placeOrder,
   verifyOrder,
   userOrders,
   listOrders,
+  updateStatus,
 } from "../controllers/orderController.js";
 
 import auth from "../middleware/auth.js";
 
 const orderRouter = express.Router();
 
-// User routes
+// User
 orderRouter.post("/place", auth, placeOrder);
 orderRouter.post("/verify", auth, verifyOrder);
 orderRouter.post("/userorders", auth, userOrders);
 
-// Admin route
+// Admin
 orderRouter.get("/list", listOrders);
+orderRouter.post("/status", updateStatus);
 
 export default orderRouter;

@@ -655,8 +655,55 @@ const placeOrder = async (req, res) => {
 // Verify Payment
 // ============================
 
+// const verifyOrder = async (req, res) => {
+//   try {
+//     const {
+//       orderId,
+//       razorpay_order_id,
+//       razorpay_payment_id,
+//       razorpay_signature,
+//     } = req.body;
+
+//     const body =
+//       razorpay_order_id + "|" + razorpay_payment_id;
+
+//     const expectedSignature = crypto
+//       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+//       .update(body)
+//       .digest("hex");
+
+//     if (expectedSignature === razorpay_signature) {
+//       await orderModel.findByIdAndUpdate(orderId, {
+//         payment: true,
+//       });
+
+//       res.json({
+//         success: true,
+//         message: "Payment Successful",
+//       });
+//     } else {
+//       await orderModel.findByIdAndDelete(orderId);
+
+//       res.json({
+//         success: false,
+//         message: "Payment Verification Failed",
+//       });
+//     }
+//   } catch (error) {
+//     console.log(error);
+
+//     res.json({
+//       success: false,
+//       message: error.message,
+//     });
+//   }
+// };
+
 const verifyOrder = async (req, res) => {
   try {
+    console.log("VERIFY BODY");
+    console.log(req.body);
+
     const {
       orderId,
       razorpay_order_id,
@@ -664,40 +711,54 @@ const verifyOrder = async (req, res) => {
       razorpay_signature,
     } = req.body;
 
-    const body =
-      razorpay_order_id + "|" + razorpay_payment_id;
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
 
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest("hex");
 
+    console.log("Expected:", expectedSignature);
+    console.log("Received:", razorpay_signature);
+
     if (expectedSignature === razorpay_signature) {
-      await orderModel.findByIdAndUpdate(orderId, {
-        payment: true,
-      });
+
+      console.log("Payment Verified");
+
+      await orderModel.findByIdAndUpdate(
+        orderId,
+        {
+          payment: true
+        }
+      );
 
       res.json({
-        success: true,
-        message: "Payment Successful",
+        success: true
       });
+
     } else {
+
+      console.log("Signature Failed");
+
       await orderModel.findByIdAndDelete(orderId);
 
       res.json({
-        success: false,
-        message: "Payment Verification Failed",
+        success:false
       });
+
     }
-  } catch (error) {
+
+  } catch(error){
+
     console.log(error);
 
     res.json({
-      success: false,
-      message: error.message,
+      success:false,
+      message:error.message
     });
+
   }
-};
+}
 
 // ============================
 // User Orders
