@@ -473,6 +473,131 @@
 // export { placeOrder, verifyPayment, userOrders };
 
 
+// import orderModel from "../models/orderModel.js";
+// import userModel from "../models/userModel.js";
+// import Razorpay from "razorpay";
+// import crypto from "crypto";
+
+// const razorpay = new Razorpay({
+//   key_id: process.env.RAZORPAY_KEY_ID,
+//   key_secret: process.env.RAZORPAY_KEY_SECRET,
+// });
+
+
+// // Place order + create Razorpay order
+// // const placeOrder = async (req, res) => {
+// //   try {
+// //     const newOrder = new orderModel({
+// //       userId: req.body.userId,
+// //       items: req.body.items,
+// //       amount: req.body.amount,
+// //       address: req.body.address,
+// //     });
+// //     await newOrder.save();
+
+// //     await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
+
+// //     const options = {
+// //       amount: Math.round(req.body.amount * 100), // paise
+// //       currency: "INR",
+// //       receipt: `order_${newOrder._id}`,
+// //     };
+// //     console.log("KEY:", process.env.RAZORPAY_KEY_ID);
+// // console.log("SECRET:", process.env.RAZORPAY_KEY_SECRET ? "Loaded" : "Missing");
+// //     const razorpayOrder = await razorpay.orders.create(options);
+
+// //     res.json({
+// //       success: true,
+// //       order: razorpayOrder,
+// //       orderId: newOrder._id,
+// //       key: process.env.RAZORPAY_KEY_ID,
+// //     });
+// //   } catch (error) {
+// //     console.log(error);
+// //     res.json({ success: false, message: error.message });
+// //   }
+// // };
+// const placeOrder = async (req, res) => {
+//   console.log("STEP 1: placeOrder started, body =", JSON.stringify(req.body));
+
+//   try {
+//     const newOrder = new orderModel({
+//       userId: req.body.userId,
+//       items: req.body.items,
+//       amount: req.body.amount,
+//       address: req.body.address,
+//     });
+
+//     console.log("STEP 2: about to save order");
+//     await newOrder.save();
+//     console.log("STEP 3: order saved, id =", newOrder._id);
+
+//     await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
+//     console.log("STEP 4: cart cleared");
+
+//     const options = {
+//       amount: Math.round(req.body.amount * 100),
+//       currency: "INR",
+//       receipt: `order_${newOrder._id}`,
+//     };
+
+//     console.log("STEP 5: creating razorpay order with options =", options);
+//     const razorpayOrder = await razorpay.orders.create(options);
+//     console.log("STEP 6: razorpay order created =", razorpayOrder.id);
+
+//     res.json({
+//       success: true,
+//       order: razorpayOrder,
+//       orderId: newOrder._id,
+//       key: process.env.RAZORPAY_KEY_ID,
+//     });
+//   } catch (error) {
+//     console.log("❌ ERROR CAUGHT:", error);
+//     res.json({ success: false, message: error.message });
+//   }
+// };
+
+// // Verify payment signature — this is the security-critical step
+// const verifyOrder = async (req, res) => {
+//   const { orderId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+//   try {
+//     const body = razorpay_order_id + "|" + razorpay_payment_id;
+//     const expectedSignature = crypto
+//       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+//       .update(body)
+//       .digest("hex");
+
+//     if (expectedSignature === razorpay_signature) {
+//       await orderModel.findByIdAndUpdate(orderId, { payment: true });
+//       res.json({ success: true, message: "Paid" });
+//     } else {
+//       await orderModel.findByIdAndDelete(orderId);
+//       res.json({ success: false, message: "Invalid signature" });
+//     }
+//   } catch (error) {
+//     // console.log(error);
+//     // res.json({ success: false, message: "Error verifying payment" });
+//     // } catch (error) {
+//   console.log(error);
+//   res.json({ success: false, message: error.message }); // 👈 temporary — shows real reason
+
+//   }
+// };
+
+// const userOrders = async (req, res) => {
+//   try {
+//     const orders = await orderModel.find({ userId: req.body.userId });
+//     res.json({ success: true, data: orders });
+//   } catch (error) {
+//     res.json({ success: false, message: "Error fetching orders" });
+//   }
+// };
+
+// export { placeOrder, verifyOrder, userOrders };
+
+
+
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import Razorpay from "razorpay";
@@ -483,43 +608,11 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
+// ============================
+// Place Order
+// ============================
 
-// Place order + create Razorpay order
-// const placeOrder = async (req, res) => {
-//   try {
-//     const newOrder = new orderModel({
-//       userId: req.body.userId,
-//       items: req.body.items,
-//       amount: req.body.amount,
-//       address: req.body.address,
-//     });
-//     await newOrder.save();
-
-//     await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
-
-//     const options = {
-//       amount: Math.round(req.body.amount * 100), // paise
-//       currency: "INR",
-//       receipt: `order_${newOrder._id}`,
-//     };
-//     console.log("KEY:", process.env.RAZORPAY_KEY_ID);
-// console.log("SECRET:", process.env.RAZORPAY_KEY_SECRET ? "Loaded" : "Missing");
-//     const razorpayOrder = await razorpay.orders.create(options);
-
-//     res.json({
-//       success: true,
-//       order: razorpayOrder,
-//       orderId: newOrder._id,
-//       key: process.env.RAZORPAY_KEY_ID,
-//     });
-//   } catch (error) {
-//     console.log(error);
-//     res.json({ success: false, message: error.message });
-//   }
-// };
 const placeOrder = async (req, res) => {
-  console.log("STEP 1: placeOrder started, body =", JSON.stringify(req.body));
-
   try {
     const newOrder = new orderModel({
       userId: req.body.userId,
@@ -528,12 +621,11 @@ const placeOrder = async (req, res) => {
       address: req.body.address,
     });
 
-    console.log("STEP 2: about to save order");
     await newOrder.save();
-    console.log("STEP 3: order saved, id =", newOrder._id);
 
-    await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
-    console.log("STEP 4: cart cleared");
+    await userModel.findByIdAndUpdate(req.body.userId, {
+      cartData: {},
+    });
 
     const options = {
       amount: Math.round(req.body.amount * 100),
@@ -541,9 +633,7 @@ const placeOrder = async (req, res) => {
       receipt: `order_${newOrder._id}`,
     };
 
-    console.log("STEP 5: creating razorpay order with options =", options);
     const razorpayOrder = await razorpay.orders.create(options);
-    console.log("STEP 6: razorpay order created =", razorpayOrder.id);
 
     res.json({
       success: true,
@@ -552,46 +642,137 @@ const placeOrder = async (req, res) => {
       key: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
-    console.log("❌ ERROR CAUGHT:", error);
-    res.json({ success: false, message: error.message });
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-// Verify payment signature — this is the security-critical step
-const verifyOrder = async (req, res) => {
-  const { orderId, razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+// ============================
+// Verify Payment
+// ============================
 
+const verifyOrder = async (req, res) => {
   try {
-    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const {
+      orderId,
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
+
+    const body =
+      razorpay_order_id + "|" + razorpay_payment_id;
+
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(body)
       .digest("hex");
 
     if (expectedSignature === razorpay_signature) {
-      await orderModel.findByIdAndUpdate(orderId, { payment: true });
-      res.json({ success: true, message: "Paid" });
+      await orderModel.findByIdAndUpdate(orderId, {
+        payment: true,
+      });
+
+      res.json({
+        success: true,
+        message: "Payment Successful",
+      });
     } else {
       await orderModel.findByIdAndDelete(orderId);
-      res.json({ success: false, message: "Invalid signature" });
+
+      res.json({
+        success: false,
+        message: "Payment Verification Failed",
+      });
     }
   } catch (error) {
-    // console.log(error);
-    // res.json({ success: false, message: "Error verifying payment" });
-    // } catch (error) {
-  console.log(error);
-  res.json({ success: false, message: error.message }); // 👈 temporary — shows real reason
+    console.log(error);
 
+    res.json({
+      success: false,
+      message: error.message,
+    });
   }
 };
+
+// ============================
+// User Orders
+// ============================
 
 const userOrders = async (req, res) => {
   try {
-    const orders = await orderModel.find({ userId: req.body.userId });
-    res.json({ success: true, data: orders });
+    const orders = await orderModel.find({
+      userId: req.body.userId,
+    });
+
+    res.json({
+      success: true,
+      data: orders,
+    });
   } catch (error) {
-    res.json({ success: false, message: "Error fetching orders" });
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
-export { placeOrder, verifyOrder, userOrders };
+// ============================
+// Admin - All Orders
+// ============================
+
+const listOrders = async (req, res) => {
+  try {
+    const orders = await orderModel.find({});
+
+    res.json({
+      success: true,
+      data: orders,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ============================
+// Admin - Update Order Status
+// ============================
+
+const updateStatus = async (req, res) => {
+  try {
+    await orderModel.findByIdAndUpdate(req.body.orderId, {
+      status: req.body.status,
+    });
+
+    res.json({
+      success: true,
+      message: "Status Updated",
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export {
+  placeOrder,
+  verifyOrder,
+  userOrders,
+  listOrders,
+  updateStatus,
+};
