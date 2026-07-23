@@ -485,7 +485,41 @@ const razorpay = new Razorpay({
 
 
 // Place order + create Razorpay order
+// const placeOrder = async (req, res) => {
+//   try {
+//     const newOrder = new orderModel({
+//       userId: req.body.userId,
+//       items: req.body.items,
+//       amount: req.body.amount,
+//       address: req.body.address,
+//     });
+//     await newOrder.save();
+
+//     await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
+
+//     const options = {
+//       amount: Math.round(req.body.amount * 100), // paise
+//       currency: "INR",
+//       receipt: `order_${newOrder._id}`,
+//     };
+//     console.log("KEY:", process.env.RAZORPAY_KEY_ID);
+// console.log("SECRET:", process.env.RAZORPAY_KEY_SECRET ? "Loaded" : "Missing");
+//     const razorpayOrder = await razorpay.orders.create(options);
+
+//     res.json({
+//       success: true,
+//       order: razorpayOrder,
+//       orderId: newOrder._id,
+//       key: process.env.RAZORPAY_KEY_ID,
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.json({ success: false, message: error.message });
+//   }
+// };
 const placeOrder = async (req, res) => {
+  console.log("STEP 1: placeOrder started, body =", JSON.stringify(req.body));
+
   try {
     const newOrder = new orderModel({
       userId: req.body.userId,
@@ -493,18 +527,23 @@ const placeOrder = async (req, res) => {
       amount: req.body.amount,
       address: req.body.address,
     });
+
+    console.log("STEP 2: about to save order");
     await newOrder.save();
+    console.log("STEP 3: order saved, id =", newOrder._id);
 
     await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
+    console.log("STEP 4: cart cleared");
 
     const options = {
-      amount: Math.round(req.body.amount * 100), // paise
+      amount: Math.round(req.body.amount * 100),
       currency: "INR",
       receipt: `order_${newOrder._id}`,
     };
-    console.log("KEY:", process.env.RAZORPAY_KEY_ID);
-console.log("SECRET:", process.env.RAZORPAY_KEY_SECRET ? "Loaded" : "Missing");
+
+    console.log("STEP 5: creating razorpay order with options =", options);
     const razorpayOrder = await razorpay.orders.create(options);
+    console.log("STEP 6: razorpay order created =", razorpayOrder.id);
 
     res.json({
       success: true,
@@ -513,7 +552,7 @@ console.log("SECRET:", process.env.RAZORPAY_KEY_SECRET ? "Loaded" : "Missing");
       key: process.env.RAZORPAY_KEY_ID,
     });
   } catch (error) {
-    console.log(error);
+    console.log("❌ ERROR CAUGHT:", error);
     res.json({ success: false, message: error.message });
   }
 };
